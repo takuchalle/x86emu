@@ -47,6 +47,7 @@ impl Emulator {
 
             match code {
                 0xB8..=0xBF => self.mov_r32_imm32(),
+                0xE9 => self.near_jump(),
                 0xEB => self.short_jump(),
                 _ => unimplemented!(),
             }
@@ -72,6 +73,13 @@ impl Emulator {
             | (self.memory[self.eip + index + 0] as u32)
     }
 
+    fn get_sign_code32(&self, index: usize) -> i32 {
+        (self.memory[self.eip + index + 3] as i32) << 24
+            | (self.memory[self.eip + index + 2] as i32) << 16
+            | (self.memory[self.eip + index + 1] as i32) << 8
+            | (self.memory[self.eip + index + 0] as i32)
+    }
+
     fn mov_r32_imm32(&mut self) {
         let reg = self.get_code8(0) - 0xB8;
         let imm = self.get_code32(1);
@@ -80,8 +88,21 @@ impl Emulator {
     }
 
     fn short_jump(&mut self) {
-        let diff = self.get_sign_code8(1);
-        self.eip = (self.eip as i32 + diff as i32 + 2) as usize;
+        let diff = self.get_sign_code8(1) + 2;
+        self.eip = if diff < 0 {
+            self.eip.checked_sub(diff.abs() as usize).unwrap()
+        } else {
+            self.eip.checked_add(diff as usize).unwrap()
+        };
+    }
+
+    fn near_jump(&mut self) {
+        let diff = self.get_sign_code32(1) + 5;
+        self.eip = if diff < 0 {
+            self.eip.checked_sub(diff.abs() as usize).unwrap()
+        } else {
+            self.eip.checked_add(diff as usize).unwrap()
+        };
     }
 
     fn dump_register(&self) {
@@ -105,9 +126,9 @@ fn main() -> std::io::Result<()> {
 
     let mut memory = vec![0; MEMORY_SIZE];
     let mut f = File::open(&args[0]).expect("No such file");
-    f.read(&mut memory)?;
+    f.read(&mut memory[0x7c00..])?;
 
-    let mut emu = Emulator::new(0x0000, 0x7c00, memory);
+    let mut emu = Emulator::new(0x7c00, 0x7c00, memory);
 
     emu.run();
 
