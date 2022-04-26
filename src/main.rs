@@ -83,6 +83,18 @@ impl Emulator {
         let diff = self.get_sign_code8(1);
         self.eip = (self.eip as i32 + diff as i32 + 2) as usize;
     }
+
+    fn dump_register(&self) {
+        println!("EAX = {:0>8X}", self.registers[Registers::EAX as usize]);
+        println!("ECX = {:0>8X}", self.registers[Registers::ECX as usize]);
+        println!("EDX = {:0>8X}", self.registers[Registers::EDX as usize]);
+        println!("EBX = {:0>8X}", self.registers[Registers::EBX as usize]);
+        println!("ESP = {:0>8X}", self.registers[Registers::ESP as usize]);
+        println!("EBP = {:0>8X}", self.registers[Registers::EBP as usize]);
+        println!("ESI = {:0>8X}", self.registers[Registers::ESI as usize]);
+        println!("EDI = {:0>8X}", self.registers[Registers::EDI as usize]);
+        println!("EIP = {:0>8X}", self.eip);
+    }
 }
 fn main() -> std::io::Result<()> {
     let args: Vec<String> = env::args().skip(1).collect();
@@ -99,7 +111,7 @@ fn main() -> std::io::Result<()> {
 
     emu.run();
 
-    println!("{:?}", emu);
+    emu.dump_register();
 
     Ok(())
 }
