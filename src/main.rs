@@ -1,3 +1,6 @@
+mod modrm;
+
+use crate::modrm::Modrm;
 use std::env;
 use std::fs::File;
 use std::io::Read;
@@ -80,11 +83,19 @@ impl Emulator {
             | (self.memory[self.eip + index + 0] as i32)
     }
 
+    fn set_rm32(&mut self, modrm: Modrm) {}
+
     fn mov_r32_imm32(&mut self) {
         let reg = self.get_code8(0) - 0xB8;
         let imm = self.get_code32(1);
         self.registers[reg as usize] = imm;
         self.eip += 5;
+    }
+    fn mov_rm32_imm32(&mut self) {
+        self.eip += 1;
+        let modrs = Modrm::parse(self);
+        let value = self.get_code32(0);
+        self.eip += 4;
     }
 
     fn short_jump(&mut self) {
