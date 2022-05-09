@@ -1,6 +1,6 @@
 mod modrm;
 
-use crate::modrm::Modrm;
+use crate::modrm::{DispKind, Modrm};
 use std::env;
 use std::fs::File;
 use std::io::Read;
@@ -83,7 +83,50 @@ impl Emulator {
             | (self.memory[self.eip + index + 0] as i32)
     }
 
-    fn set_rm32(&mut self, modrm: Modrm) {}
+    fn set_memory8(&mut self, address: u32, value: u8) {
+        self.memory[address as usize] = value;
+    }
+
+    fn set_memory32(&mut self, addres: u32, value: u32) {
+        for i in 0..4 {
+            self.set_memory8(addres + i, (value >> (i * 8) & 0xFF) as u8);
+        }
+    }
+
+    fn set_register32(&mut self, modrm: &Modrm, value: u32) {
+        self.registers[modrm.rm as usize] = value;
+    }
+
+    fn set_rm32(&mut self, modrm: &Modrm, value: u32) {
+        match modrm.m {
+            3 => {
+                self.set_register32(modrm, value);
+            }
+            _ => {}
+        };
+    }
+
+    fn calc_memory_address(&mut self, modrm: &Modrm) -> u32 {
+        match modrm.m {
+            0b00 => match modrm.rm {
+                0b100 => unimplemented!(),
+                0b101 => match modrm.disp {
+                    DispKind::Disp8(_) => unreachable!(),
+                    DispKind::Disp32(disp32) => disp32,
+                },
+                _ => 0,
+            },
+            0b01 => match modrm.rm {
+                0b100 => unimplemented!(),
+                _ => 0,
+            },
+            0b10 => match modrm.rm {
+                0b100 => unimplemented!(),
+                _ => 0,
+            },
+            _ => unimplemented!(),
+        }
+    }
 
     fn mov_r32_imm32(&mut self) {
         let reg = self.get_code8(0) - 0xB8;
@@ -91,11 +134,13 @@ impl Emulator {
         self.registers[reg as usize] = imm;
         self.eip += 5;
     }
+
     fn mov_rm32_imm32(&mut self) {
         self.eip += 1;
-        let modrs = Modrm::parse(self);
+        let modrm = Modrm::parse(self);
         let value = self.get_code32(0);
         self.eip += 4;
+        self.set_rm32(&modrm, value);
     }
 
     fn short_jump(&mut self) {
