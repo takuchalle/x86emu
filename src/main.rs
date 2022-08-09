@@ -173,11 +173,18 @@ impl Emulator {
         println!("EIP = {:0>8X}", self.eip);
     }
 }
+
+fn usage() -> ! {
+    let name = env::args().next().unwrap();
+    println!("Usage: {} input", name);
+    panic!();
+}
+
 fn main() -> std::io::Result<()> {
     let args: Vec<String> = env::args().skip(1).collect();
 
     if args.is_empty() {
-        panic!("");
+        usage();
     }
 
     let mut memory = vec![0; MEMORY_SIZE];
