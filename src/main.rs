@@ -1,6 +1,8 @@
 mod modrm;
+mod bus;
 
 use crate::modrm::{DispKind, Modrm};
+use crate::bus::Bus;
 use std::env;
 use std::fs::File;
 use std::io::Read;
@@ -29,7 +31,7 @@ struct Emulator {
     // Program counter
     eip: usize,
 
-    memory: Vec<u8>,
+    bus: Bus,
 }
 
 impl Emulator {
@@ -40,7 +42,7 @@ impl Emulator {
             registers: regs,
             eflags: 0,
             eip,
-            memory,
+            bus: Bus::new(memory),
         }
     }
 
@@ -62,35 +64,27 @@ impl Emulator {
     }
 
     fn get_code8(&self, index: usize) -> u8 {
-        self.memory[self.eip + index]
+        self.bus.get_code8(self.eip, index)
     }
 
     fn get_sign_code8(&self, index: usize) -> i8 {
-        self.memory[self.eip + index] as i8
+        self.bus.get_sign_code8(self.eip, index)
     }
 
     fn get_code32(&self, index: usize) -> u32 {
-        (self.memory[self.eip + index + 3] as u32) << 24
-            | (self.memory[self.eip + index + 2] as u32) << 16
-            | (self.memory[self.eip + index + 1] as u32) << 8
-            | (self.memory[self.eip + index + 0] as u32)
+        self.bus.get_code32(self.eip, index)
     }
 
     fn get_sign_code32(&self, index: usize) -> i32 {
-        (self.memory[self.eip + index + 3] as i32) << 24
-            | (self.memory[self.eip + index + 2] as i32) << 16
-            | (self.memory[self.eip + index + 1] as i32) << 8
-            | (self.memory[self.eip + index + 0] as i32)
+        self.bus.get_sign_code32(self.eip, index)
     }
 
     fn set_memory8(&mut self, address: u32, value: u8) {
-        self.memory[address as usize] = value;
+        self.bus.set_memory8(address, value)
     }
 
     fn set_memory32(&mut self, addres: u32, value: u32) {
-        for i in 0..4 {
-            self.set_memory8(addres + i, (value >> (i * 8) & 0xFF) as u8);
-        }
+        self.bus.set_memory32(addres, value)
     }
 
     fn set_register32(&mut self, modrm: &Modrm, value: u32) {
