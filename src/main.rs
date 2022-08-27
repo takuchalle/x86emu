@@ -1,8 +1,8 @@
-mod modrm;
 mod bus;
+mod modrm;
 
-use crate::modrm::{DispKind, Modrm};
 use crate::bus::Bus;
+use crate::modrm::{DispKind, Modrm};
 use std::env;
 use std::fs::File;
 use std::io::Read;
@@ -79,6 +79,10 @@ impl Emulator {
         self.bus.get_sign_code32(self.eip, index)
     }
 
+    fn get_register32(&self, no: usize) -> u32 {
+        self.registers[no]
+    }
+
     fn set_memory8(&mut self, address: u32, value: u8) {
         self.bus.set_memory8(address, value)
     }
@@ -93,10 +97,14 @@ impl Emulator {
 
     fn set_rm32(&mut self, modrm: &Modrm, value: u32) {
         match modrm.m {
-            3 => {
+            // mod
+            0b11 => {
                 self.set_register32(modrm, value);
             }
-            _ => {}
+            _ => {
+                let address = self.calc_memory_address(modrm);
+                self.set_memory32(address, value);
+            }
         };
     }
 
@@ -108,7 +116,7 @@ impl Emulator {
                     DispKind::Disp8(_) => unreachable!(),
                     DispKind::Disp32(disp32) => disp32,
                 },
-                _ => 0,
+                _ => self.get_register32(usize::from(modrm.rm)),
             },
             0b01 => match modrm.rm {
                 0b100 => unimplemented!(),
